@@ -37,3 +37,13 @@ Status: Complete
 - Browser smoke test passed at `http://127.0.0.1:3000`: landing page, manual-file stream, stored result page, React Flow nodes/connections, Flow Theater, Prompt Maker tab, and ComponentForge preview.
 - Runtime Flow and Story Mode code validation passed with `npm run typecheck` and `npm run build`.
 - Browser smoke test passed on the current result page: Graph Mode tab, Actual App Flow panel with Simple/Technical toggle, Story Mode panel with scene controls, story scenes, and no console errors.
+
+## Production Result Recovery
+
+Status: Complete
+
+- [x] Confirm result pages depended only on a server-side `globalThis` Map.
+- [x] Add content-stripped browser persistence helpers for completed analyses.
+- [x] Include a browser-safe analysis copy in the final analyzer stream event.
+- [x] Recover missing result pages from same-browser storage when the server cache is cold.
+- [x] Validate typecheck/build after recovery changes.

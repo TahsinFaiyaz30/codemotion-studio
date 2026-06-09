@@ -1,5 +1,6 @@
 import { runAnalyzer } from "@/lib/scanner/analyzer";
 import { saveAnalysisResult } from "@/lib/storage/analysis-store";
+import { toBrowserSafeAnalysis } from "@/lib/storage/browser-analysis-store";
 import { encodeSse } from "@/lib/stream/sse";
 import type { AnalysisMode } from "@/lib/types/analysis";
 
@@ -49,7 +50,8 @@ export async function POST(request: Request) {
                 analysisId: result.id,
                 repoName: result.repoName,
                 filesSelected: result.stats.filesSelected,
-                astParsedFiles: result.stats.astParsedFiles
+                astParsedFiles: result.stats.astParsedFiles,
+                analysis: toBrowserSafeAnalysis(result)
               }
             })
           )

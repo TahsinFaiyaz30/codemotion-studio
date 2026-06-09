@@ -37,7 +37,9 @@ No invented repository should be the main product path. If AI API keys are missi
 
 ## Current Implementation
 
-- `/api/analyze/stream` runs the analyzer pipeline and stores results in server memory.
+- `/api/analyze/stream` runs the analyzer pipeline and stores results in server memory, then sends a content-stripped analysis copy in the final SSE event for same-browser recovery.
+- `/result/[analysisId]` first tries the server memory cache, then recovers from this browser's saved analysis copy if production memory is cold or routed to another instance.
+- Server memory is not durable production storage. Cross-browser, cross-device, or long-lived result URLs still require a database/KV/blob-backed analysis store.
 - GitHub analysis fetches metadata, recursive tree data, selected file contents, then parses selected source files.
 - Manual fallback parses pasted `path`, `---`, `code` bundles and runs the same planner/parser/synthesis path.
 - Huge repo planner scores files, applies count/byte budgets, and records skip reasons.

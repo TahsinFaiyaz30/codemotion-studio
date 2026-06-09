@@ -7,6 +7,19 @@ export interface StoredAnalysisRecord {
 
 export const HISTORY_STORAGE_KEY = "codemotion:last-analysis";
 
+export function writeStoredAnalysisRecord(record: StoredAnalysisRecord) {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  try {
+    window.localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(record));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function readStoredAnalysisRecord(): StoredAnalysisRecord | null {
   if (typeof window === "undefined") {
     return null;
@@ -24,4 +37,3 @@ export function readStoredAnalysisRecord(): StoredAnalysisRecord | null {
     return null;
   }
 }
-

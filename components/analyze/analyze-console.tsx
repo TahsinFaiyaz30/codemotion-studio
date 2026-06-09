@@ -8,6 +8,8 @@ import { ModeSelector } from "@/components/analyze/mode-selector";
 import { StreamTimeline } from "@/components/analyze/stream-timeline";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button, buttonClassName } from "@/components/ui/button";
+import { isAnalysisResult, writeStoredAnalysis } from "@/lib/storage/browser-analysis-store";
+import { writeStoredAnalysisRecord } from "@/lib/storage/history";
 import { extractSseBlocks, parseSseBlock } from "@/lib/stream/client";
 import type { AnalysisMode, AnalysisStreamEvent } from "@/lib/types/analysis";
 
@@ -77,17 +79,26 @@ export function AnalyzeConsole({ initialRepo = "" }: { initialRepo?: string }) {
           setEvents((current) => [...current, event]);
 
           if (event.type === "final") {
-            const id = typeof event.details?.analysisId === "string" ? event.details.analysisId : "";
+            const analysis = event.details?.analysis;
+            const id =
+              typeof event.details?.analysisId === "string"
+                ? event.details.analysisId
+                : isAnalysisResult(analysis)
+                  ? analysis.id
+                  : "";
             setAnalysisId(id);
-            localStorage.setItem(
-              "codemotion:last-analysis",
-              JSON.stringify({
+            if (id) {
+              writeStoredAnalysisRecord({
                 id,
                 repoUrl: repoUrl || "manual://pasted-files",
                 mode,
                 savedAt: new Date().toISOString()
-              })
-            );
+              });
+            }
+
+            if (isAnalysisResult(analysis) && !writeStoredAnalysis(analysis)) {
+              setError("Analysis completed, but this browser could not save a recovery copy.");
+            }
           }
 
           if (event.type === "error") {

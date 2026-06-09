@@ -1,5 +1,5 @@
 import { ResultDashboard } from "@/components/result/result-dashboard";
-import { MissingResult } from "@/components/result/missing-result";
+import { RecoverableMissingResult } from "@/components/result/recoverable-missing-result";
 import { getAnalysisResult, saveAnalysisResult } from "@/lib/storage/analysis-store";
 import { ensureAnalysisLayers } from "@/lib/story/ensureAnalysisLayers";
 
@@ -14,7 +14,7 @@ export default async function ResultPage({
   const analysis = getAnalysisResult(analysisId);
 
   if (!analysis) {
-    return <MissingResult analysisId={analysisId} />;
+    return <RecoverableMissingResult analysisId={analysisId} />;
   }
 
   const upgradedAnalysis = await ensureAnalysisLayers(analysis);

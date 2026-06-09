@@ -15,7 +15,8 @@ import { StoryModePanel } from "@/components/story/StoryModePanel";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
-import { HISTORY_STORAGE_KEY } from "@/lib/storage/history";
+import { writeStoredAnalysis } from "@/lib/storage/browser-analysis-store";
+import { writeStoredAnalysisRecord } from "@/lib/storage/history";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -38,15 +39,13 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
   );
 
   function saveResult() {
-    localStorage.setItem(
-      HISTORY_STORAGE_KEY,
-      JSON.stringify({
-        id: analysis.id,
-        repoUrl: analysis.repoUrl,
-        mode: analysis.mode,
-        savedAt: new Date().toISOString()
-      })
-    );
+    writeStoredAnalysisRecord({
+      id: analysis.id,
+      repoUrl: analysis.repoUrl,
+      mode: analysis.mode,
+      savedAt: new Date().toISOString()
+    });
+    writeStoredAnalysis(analysis);
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1400);
   }
