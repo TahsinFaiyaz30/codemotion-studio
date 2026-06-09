@@ -4,12 +4,14 @@ import { Download, Home, Save, Sparkles, TerminalSquare } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { ComponentForgePreview } from "@/components/component-forge/component-forge-preview";
-import { FlowTheater } from "@/components/flow-theater/flow-theater";
 import { CodeFlowGraph } from "@/components/graph/code-flow-graph";
 import { PromptMaker } from "@/components/prompt-maker/prompt-maker";
+import { ResultTabs, type ResultMode } from "@/components/result/ResultTabs";
 import { InspectorPanel } from "@/components/result/inspector-panel";
 import { ResultSidebar } from "@/components/result/result-sidebar";
+import { RuntimeFlowPanel } from "@/components/runtime-flow/RuntimeFlowPanel";
 import { StackDnaPanel } from "@/components/stack-dna/stack-dna-panel";
+import { StoryModePanel } from "@/components/story/StoryModePanel";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
@@ -17,10 +19,9 @@ import { HISTORY_STORAGE_KEY } from "@/lib/storage/history";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import { cn, formatNumber } from "@/lib/utils";
 
-type ResultPanel = "flow" | "stack" | "prompts" | "component";
+type ResultPanel = "stack" | "prompts" | "component";
 
 const panels: Array<{ id: ResultPanel; label: string }> = [
-  { id: "flow", label: "Flows" },
   { id: "stack", label: "Stack" },
   { id: "prompts", label: "Prompts" },
   { id: "component", label: "Generate UI" }
@@ -28,7 +29,8 @@ const panels: Array<{ id: ResultPanel; label: string }> = [
 
 export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
   const [selectedNodeId, setSelectedNodeId] = useState(analysis.nodes[0]?.id ?? "");
-  const [activePanel, setActivePanel] = useState<ResultPanel>("flow");
+  const [activeMode, setActiveMode] = useState<ResultMode>("graph");
+  const [activePanel, setActivePanel] = useState<ResultPanel>("stack");
   const [saved, setSaved] = useState(false);
   const selectedNode = useMemo(
     () => analysis.nodes.find((node) => node.id === selectedNodeId) ?? analysis.nodes[0],
@@ -112,22 +114,34 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
           </div>
         </section>
 
-        <section className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]">
-          <ResultSidebar
-            analysis={analysis}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-          />
-          <CodeFlowGraph
-            nodes={analysis.nodes}
-            edges={analysis.edges}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
-          />
-          {selectedNode ? <InspectorPanel analysis={analysis} node={selectedNode} /> : null}
-        </section>
+        <ResultTabs activeMode={activeMode} onChange={setActiveMode} />
 
-        <section>
+        {activeMode === "graph" ? (
+          <section className="grid gap-4 xl:grid-cols-[260px_minmax(0,1fr)_340px]">
+            <ResultSidebar
+              analysis={analysis}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={setSelectedNodeId}
+            />
+            <CodeFlowGraph
+              nodes={analysis.nodes}
+              edges={analysis.edges}
+              selectedNodeId={selectedNodeId}
+              onSelectNode={setSelectedNodeId}
+            />
+            {selectedNode ? <InspectorPanel analysis={analysis} node={selectedNode} /> : null}
+          </section>
+        ) : null}
+
+        {activeMode === "runtime" ? (
+          <RuntimeFlowPanel runtimeFlows={analysis.runtimeFlows} />
+        ) : null}
+
+        {activeMode === "story" ? (
+          <StoryModePanel story={analysis.story} storyComponents={analysis.storyComponents} />
+        ) : null}
+
+        <section className={activeMode === "graph" ? "" : "pt-1"}>
           <div className="mb-3 flex flex-wrap gap-2">
             {panels.map((panel) => (
               <button
@@ -144,7 +158,6 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
             ))}
           </div>
 
-          {activePanel === "flow" && analysis.flows[0] ? <FlowTheater flow={analysis.flows[0]} /> : null}
           {activePanel === "stack" ? <StackDnaPanel analysis={analysis} /> : null}
           {activePanel === "prompts" ? <PromptMaker prompts={analysis.prompts} /> : null}
           {activePanel === "component" ? (

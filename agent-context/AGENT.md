@@ -27,6 +27,9 @@ Every future AI or coding agent must read these files before inspecting the rest
 - Make the UI responsive from the first version.
 - Use icons from lucide-react for tool buttons and compact controls.
 - Avoid arbitrary code execution for generated UI; render ComponentSpec data only.
+- Preserve the three result layers: Graph Mode for technical file connections, Actual App Flow for product/user runtime journeys, and Story Mode for normal-person animated explanation.
+- Story Mode may use AI for compressed story generation, but it must fall back to deterministic local story generation based on real analysis.
+- Story animation components must remain safe JSON specs rendered by controlled components.
 
 ## Current Non-Goals
 

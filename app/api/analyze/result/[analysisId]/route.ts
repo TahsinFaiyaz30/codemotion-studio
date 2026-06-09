@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getAnalysisResult } from "@/lib/storage/analysis-store";
+import { getAnalysisResult, saveAnalysisResult } from "@/lib/storage/analysis-store";
+import { ensureAnalysisLayers } from "@/lib/story/ensureAnalysisLayers";
 
 export async function GET(
   _request: Request,
@@ -12,9 +13,11 @@ export async function GET(
     return NextResponse.json({ ok: false, error: "Analysis result not found." }, { status: 404 });
   }
 
+  const upgradedAnalysis = await ensureAnalysisLayers(analysis);
+  saveAnalysisResult(upgradedAnalysis);
+
   return NextResponse.json({
     ok: true,
-    analysis
+    analysis: upgradedAnalysis
   });
 }
-

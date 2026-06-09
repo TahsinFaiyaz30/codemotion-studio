@@ -11,8 +11,11 @@ import { findFlows } from "@/lib/scanner/flow-finder";
 import { planHugeRepo } from "@/lib/scanner/huge-repo-planner";
 import { parseManualFiles } from "@/lib/scanner/manual-files";
 import { forgePrompts } from "@/lib/scanner/prompt-forge";
+import { synthesizeRuntimeFlows } from "@/lib/scanner/runtimeFlowSynthesizer";
 import { mapAstFiles } from "@/lib/scanner/ast-mapper";
 import { detectStack } from "@/lib/scanner/stack-detective";
+import { generateCodebaseStory } from "@/lib/story/storyEngine";
+import { planStoryComponents } from "@/lib/story/storyComponentPlanner";
 import type { AnalysisMode, AnalysisResult, AnalysisStage, AnalysisStreamEvent, RepoFile } from "@/lib/types/analysis";
 
 export interface AnalyzerInput {
@@ -179,6 +182,23 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     clusters: clusters.length
   });
 
+  yield event(
+    "stage",
+    "synthesizing_runtime_flows",
+    "Building real user journeys from routes, components, APIs, and database links.",
+    89,
+    { flows: flows.length, clusters: clusters.length }
+  );
+
+  const runtimeFlows = synthesizeRuntimeFlows({
+    nodes,
+    edges,
+    parsedFiles,
+    stack,
+    clusters,
+    flows
+  });
+
   yield event("stage", "compressing_context", "Compressed analysis context for prompts and safe UI generation.", 91, {
     contextSaved: estimateContextSaved(totalBytes, selectedBytes)
   });
@@ -205,7 +225,16 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
             files: cluster.files.slice(0, 10),
             summary: cluster.summary
           })),
-          flows: flows.map((flow) => flow.name)
+          runtimeFlows: runtimeFlows.map((flow) => ({
+            name: flow.plainEnglishName,
+            actor: flow.actor,
+            userGoal: flow.userGoal,
+            steps: flow.steps.map((step) => ({
+              layer: step.layer,
+              title: step.title,
+              plainEnglish: step.plainEnglish
+            }))
+          }))
         })
       });
       aiAnalyzedClusters = aiSummaryText ? clusters.length : 0;
@@ -218,14 +247,55 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     });
   }
 
+  yield event(
+    aiStatus.configured ? "ai_activity" : "stage",
+    "generating_story_mode",
+    aiStatus.configured
+      ? "AI is turning the app into a normal-person story based on detected runtime flows."
+      : "Generating Story Mode locally from detected runtime flows.",
+    94,
+    { runtimeFlows: runtimeFlows.length }
+  );
+
+  const story = await generateCodebaseStory({
+    repoName,
+    summary:
+      aiSummaryText ??
+      `${repoName} analyzed ${files.length} files and produced ${nodes.length} graph nodes.`,
+    runtimeFlows,
+    designDNA
+  });
+
+  yield event(
+    "component_generation",
+    "planning_story_components",
+    "Planning animated UI components needed for the story.",
+    95,
+    { scenes: story.scenes.length }
+  );
+
+  const storyComponents = planStoryComponents({
+    story,
+    designDNA,
+    runtimeFlows
+  });
+
+  yield event(
+    "component_generation",
+    "generating_story_component_specs",
+    "Generated safe story animation component specs that match the current Design DNA.",
+    96,
+    { storyComponents: storyComponents.length }
+  );
+
   const prompts = forgePrompts({
     repoName,
     stackNames: stack.map((item) => item.name),
     clusterNames: clusters.map((cluster) => cluster.name),
-    flowNames: flows.map((flow) => flow.name)
+    flowNames: runtimeFlows.map((flow) => flow.plainEnglishName)
   });
 
-  yield event("stage", "generating_prompts", "Generated prompts from compressed analysis facts.", 96, {
+  yield event("stage", "generating_prompts", "Generated prompts from compressed analysis facts.", 97, {
     prompts: prompts.length
   });
 
@@ -267,6 +337,9 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     nodes,
     edges,
     flows,
+    runtimeFlows,
+    story,
+    storyComponents,
     prompts,
     componentSpec
   };

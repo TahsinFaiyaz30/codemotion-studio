@@ -1,6 +1,7 @@
 import { ResultDashboard } from "@/components/result/result-dashboard";
 import { MissingResult } from "@/components/result/missing-result";
-import { getAnalysisResult } from "@/lib/storage/analysis-store";
+import { getAnalysisResult, saveAnalysisResult } from "@/lib/storage/analysis-store";
+import { ensureAnalysisLayers } from "@/lib/story/ensureAnalysisLayers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,8 @@ export default async function ResultPage({
     return <MissingResult analysisId={analysisId} />;
   }
 
-  return <ResultDashboard analysis={analysis} />;
-}
+  const upgradedAnalysis = await ensureAnalysisLayers(analysis);
+  saveAnalysisResult(upgradedAnalysis);
 
+  return <ResultDashboard analysis={upgradedAnalysis} />;
+}

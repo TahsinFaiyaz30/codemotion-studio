@@ -23,10 +23,14 @@ export type AnalysisStage =
   | "building_file_graph"
   | "detecting_routes"
   | "detecting_flows"
+  | "synthesizing_runtime_flows"
   | "extracting_design_dna"
   | "grouping_feature_clusters"
   | "compressing_context"
   | "running_ai_cluster_summaries"
+  | "generating_story_mode"
+  | "planning_story_components"
+  | "generating_story_component_specs"
   | "composing_visualization"
   | "generating_dynamic_components"
   | "generating_prompts"
@@ -141,6 +145,158 @@ export interface FlowScenario {
   steps: FlowStep[];
 }
 
+export type RuntimeFlowActor =
+  | "visitor"
+  | "user"
+  | "admin"
+  | "seller"
+  | "buyer"
+  | "developer"
+  | "system"
+  | "unknown";
+
+export type RuntimeFlowStepLayer =
+  | "user"
+  | "screen"
+  | "component"
+  | "state"
+  | "api"
+  | "validation"
+  | "service"
+  | "database"
+  | "external"
+  | "response"
+  | "ui-update";
+
+export type RuntimeFlowVisualHint =
+  | "click"
+  | "type"
+  | "submit"
+  | "loading"
+  | "request"
+  | "database-save"
+  | "response"
+  | "redirect"
+  | "render"
+  | "notification";
+
+export interface RuntimeFlowStep {
+  order: number;
+  layer: RuntimeFlowStepLayer;
+  title: string;
+  plainEnglish: string;
+  technical: string;
+  filePaths: string[];
+  nodeIds: string[];
+  edgeIds: string[];
+  visualHint: RuntimeFlowVisualHint;
+}
+
+export interface RuntimeFlow {
+  id: string;
+  name: string;
+  plainEnglishName: string;
+  purpose: string;
+  actor: RuntimeFlowActor;
+  trigger: string;
+  userGoal: string;
+  startsAt: string;
+  endsAt: string;
+  steps: RuntimeFlowStep[];
+  businessMeaning: string;
+  beginnerExplanation: string;
+  confidence: number;
+}
+
+export type StoryAnimationType =
+  | "hero-intro"
+  | "ui-click"
+  | "data-travel"
+  | "api-tunnel"
+  | "database-pulse"
+  | "stack-reveal"
+  | "feature-tour"
+  | "before-after"
+  | "problem-solution"
+  | "ending";
+
+export interface CodebaseStoryScene {
+  id: string;
+  sceneNumber: number;
+  title: string;
+  narration: string;
+  whatUserSees: string;
+  whatUserDoes: string;
+  whatAppDoesBehindScenes: string;
+  relatedRuntimeFlowId: string;
+  relatedFiles: string[];
+  animationType: StoryAnimationType;
+  componentsNeeded: string[];
+  durationHintSeconds: number;
+}
+
+export interface CodebaseStory {
+  id: string;
+  title: string;
+  subtitle: string;
+  normalPersonSummary: string;
+  whoUsesThis: string[];
+  whyItExists: string;
+  mainProblemSolved: string;
+  storyArc: {
+    opening: string;
+    problem: string;
+    journey: string;
+    resolution: string;
+  };
+  scenes: CodebaseStoryScene[];
+  ending: string;
+  developerTakeaway: string;
+  nonTechnicalTakeaway: string;
+}
+
+export type StoryComponentType =
+  | "animated-card"
+  | "phone-mockup"
+  | "browser-window"
+  | "data-packet"
+  | "api-tunnel"
+  | "database-orb"
+  | "user-avatar"
+  | "stack-badge"
+  | "timeline-step"
+  | "flow-map"
+  | "feature-spotlight"
+  | "custom";
+
+export type StoryMotionType =
+  | "fade"
+  | "slide"
+  | "scale"
+  | "packet-travel"
+  | "pulse"
+  | "orbit"
+  | "morph"
+  | "reveal"
+  | "typewriter";
+
+export interface StoryAnimationComponentSpec {
+  name: string;
+  purpose: string;
+  sceneId: string;
+  matchesDesignDNA: boolean;
+  componentType: StoryComponentType;
+  props: Record<string, unknown>;
+  layout: Record<string, unknown>;
+  animation: {
+    motion: StoryMotionType;
+    duration: number;
+    sequenceOrder: number;
+  };
+  responsiveBehavior: string;
+  accessibilityNotes: string[];
+}
+
 export interface PromptCard {
   id: string;
   title: string;
@@ -240,6 +396,9 @@ export interface AnalysisResult {
   nodes: CodeNode[];
   edges: CodeEdge[];
   flows: FlowScenario[];
+  runtimeFlows: RuntimeFlow[];
+  story: CodebaseStory;
+  storyComponents: StoryAnimationComponentSpec[];
   prompts: PromptCard[];
   componentSpec: ComponentSpec;
 }
