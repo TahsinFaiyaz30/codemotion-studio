@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { ComponentForgePreview } from "@/components/component-forge/component-forge-preview";
 import { CodeFlowGraph } from "@/components/graph/code-flow-graph";
 import { PromptMaker } from "@/components/prompt-maker/prompt-maker";
+import { AppUnderstandingPanel } from "@/components/result/app-understanding-panel";
 import { ResultTabs, type ResultMode } from "@/components/result/ResultTabs";
 import { InspectorPanel } from "@/components/result/inspector-panel";
 import { ResultSidebar } from "@/components/result/result-sidebar";
@@ -17,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { writeStoredAnalysis } from "@/lib/storage/browser-analysis-store";
 import { writeStoredAnalysisRecord } from "@/lib/storage/history";
+import { buildProductSummary, cleanDisplaySummary } from "@/lib/story/productSummary";
 import type { AnalysisResult } from "@/lib/types/analysis";
 import { cn, formatNumber } from "@/lib/utils";
 
@@ -37,12 +39,16 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
     () => analysis.nodes.find((node) => node.id === selectedNodeId) ?? analysis.nodes[0],
     [analysis.nodes, selectedNodeId]
   );
+  const displaySummary = analysis.appUnderstanding
+    ? buildProductSummary(analysis.appUnderstanding)
+    : cleanDisplaySummary(analysis.summary);
 
   function saveResult() {
     writeStoredAnalysisRecord({
       id: analysis.id,
       repoUrl: analysis.repoUrl,
       mode: analysis.mode,
+      aiProvider: analysis.aiProviderChoice,
       savedAt: new Date().toISOString()
     });
     writeStoredAnalysis(analysis);
@@ -98,7 +104,7 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
                 <TerminalSquare className="h-4 w-4 text-primary" aria-hidden="true" />
                 <h2 className="font-bold">Analysis Summary</h2>
               </div>
-              <p className="text-sm leading-6 text-muted-foreground">{analysis.summary}</p>
+              <p className="text-sm leading-6 text-muted-foreground">{displaySummary}</p>
             </div>
             {[
               ["Files scanned", formatNumber(analysis.stats.filesScanned)],
@@ -112,6 +118,8 @@ export function ResultDashboard({ analysis }: { analysis: AnalysisResult }) {
             ))}
           </div>
         </section>
+
+        <AppUnderstandingPanel analysis={analysis} />
 
         <ResultTabs activeMode={activeMode} onChange={setActiveMode} />
 

@@ -5,13 +5,14 @@ import { ArrowRight, ClipboardList, GitBranch, RotateCcw, TerminalSquare } from 
 import Link from "next/link";
 import { useState } from "react";
 import { ModeSelector } from "@/components/analyze/mode-selector";
+import { ProviderSelector } from "@/components/analyze/provider-selector";
 import { StreamTimeline } from "@/components/analyze/stream-timeline";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button, buttonClassName } from "@/components/ui/button";
 import { isAnalysisResult, writeStoredAnalysis } from "@/lib/storage/browser-analysis-store";
 import { writeStoredAnalysisRecord } from "@/lib/storage/history";
 import { extractSseBlocks, parseSseBlock } from "@/lib/stream/client";
-import type { AnalysisMode, AnalysisStreamEvent } from "@/lib/types/analysis";
+import type { AiProviderChoice, AnalysisMode, AnalysisStreamEvent } from "@/lib/types/analysis";
 
 const manualExample =
   "app/page.tsx\n---\nexport default function Page() { return <main>Hello</main>; }\n\ncomponents/card.tsx\n---\nexport function Card() { return <section />; }";
@@ -19,6 +20,7 @@ const manualExample =
 export function AnalyzeConsole({ initialRepo = "" }: { initialRepo?: string }) {
   const [repoUrl, setRepoUrl] = useState(initialRepo);
   const [mode, setMode] = useState<AnalysisMode>("balanced");
+  const [aiProvider, setAiProvider] = useState<AiProviderChoice>("auto");
   const [manualFiles, setManualFiles] = useState("");
   const [events, setEvents] = useState<AnalysisStreamEvent[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -46,6 +48,7 @@ export function AnalyzeConsole({ initialRepo = "" }: { initialRepo?: string }) {
         body: JSON.stringify({
           repoUrl,
           mode,
+          aiProvider,
           manualFiles
         })
       });
@@ -92,6 +95,7 @@ export function AnalyzeConsole({ initialRepo = "" }: { initialRepo?: string }) {
                 id,
                 repoUrl: repoUrl || "manual://pasted-files",
                 mode,
+                aiProvider,
                 savedAt: new Date().toISOString()
               });
             }
@@ -165,6 +169,8 @@ export function AnalyzeConsole({ initialRepo = "" }: { initialRepo?: string }) {
               </div>
 
               <ModeSelector value={mode} onChange={setMode} />
+
+              <ProviderSelector value={aiProvider} onChange={setAiProvider} />
 
               <div>
                 <label htmlFor="manual-files" className="mb-2 flex items-center gap-2 text-sm font-semibold">

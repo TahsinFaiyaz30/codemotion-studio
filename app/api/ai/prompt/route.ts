@@ -13,9 +13,11 @@ export async function POST(request: Request) {
   }
 
   const prompts = promptsFromAnalysis(payload.analysis);
-  const status = getAiStatus();
+  const status = getAiStatus({ providerChoice: payload.analysis.aiProviderChoice, task: "prompt" });
   const aiText = status.configured
     ? await generateAiText({
+        providerChoice: payload.analysis.aiProviderChoice,
+        task: "prompt",
         system: "You create concise developer prompts from codebase analysis facts.",
         prompt: JSON.stringify({
           repoName: payload.analysis.repoName,

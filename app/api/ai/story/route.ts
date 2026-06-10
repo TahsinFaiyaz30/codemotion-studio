@@ -15,7 +15,10 @@ export async function POST(request: Request) {
     repoName: payload.analysis.repoName,
     summary: payload.analysis.summary,
     runtimeFlows: payload.analysis.runtimeFlows,
-    designDNA: payload.analysis.designDNA
+    designDNA: payload.analysis.designDNA,
+    appUnderstanding: payload.analysis.appUnderstanding,
+    folderReports: payload.analysis.folderReports,
+    providerChoice: payload.analysis.aiProviderChoice
   });
 
   return NextResponse.json({
@@ -23,4 +26,3 @@ export async function POST(request: Request) {
     story
   });
 }
-

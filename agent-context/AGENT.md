@@ -28,8 +28,16 @@ Every future AI or coding agent must read these files before inspecting the rest
 - Use icons from lucide-react for tool buttons and compact controls.
 - Avoid arbitrary code execution for generated UI; render ComponentSpec data only.
 - Preserve the three result layers: Graph Mode for technical file connections, Actual App Flow for product/user runtime journeys, and Story Mode for normal-person animated explanation.
-- Story Mode may use AI for compressed story generation, but it must fall back to deterministic local story generation based on real analysis.
+- Story Mode must be a literal human problem-solution story, not a file/function summary. It may use AI, but it must fall back to deterministic local story generation based on real analysis.
+- Actual App Flow must include a visual animated product/system flow, not only text.
+- Generate product-level Actual App Flow before visual specs, so visual nodes come from the app journey instead of technical controllers, routes, or file names.
+- Result recovery must upgrade stale browser/server analyses before rendering; do not render localStorage analysis directly if it may contain legacy technical flow/story data.
+- Auto AI mode must route different tasks to different configured models when available. Direct provider choices must keep the same pipeline but force one provider.
+- Folder agents should stay small and parallel, then merge into a product-level app understanding before story/visual generation.
 - Story animation components must remain safe JSON specs rendered by controlled components.
+- Dynamic Story and Flow UI must be generated as safe JSON visual specs from analysis facts, then rendered by controlled UI/Three.js components. Do not eval generated code.
+- Keep dashboard summary copy short, product-facing, and human-readable. Never render raw AI markdown/table cluster output in the Analysis Summary card.
+- Keep Actual App Flow animations inside dedicated UI regions so moving dots/lines never cross text or cards.
 
 ## Current Non-Goals
 

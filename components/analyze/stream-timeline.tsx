@@ -24,8 +24,41 @@ function iconFor(event: AnalysisStreamEvent, isLatest: boolean) {
   return <CircleDot className="h-4 w-4 text-muted-foreground" aria-hidden="true" />;
 }
 
+function detailLines(details: Record<string, unknown> | undefined) {
+  if (!details) return [];
+
+  const lines: string[] = [];
+
+  if (typeof details.provider === "string" || typeof details.model === "string") {
+    lines.push(`AI: ${details.provider ?? "local"}${details.model ? ` / ${details.model}` : ""}`);
+  }
+
+  if (typeof details.folder === "string") {
+    lines.push(`Folder: ${details.folder}`);
+  }
+
+  if (typeof details.agentIndex === "number" && typeof details.agentTotal === "number") {
+    lines.push(`Agent ${details.agentIndex} of ${details.agentTotal}`);
+  }
+
+  if (typeof details.appType === "string") {
+    lines.push(`App type: ${details.appType}`);
+  }
+
+  if (typeof details.confidence === "number") {
+    lines.push(`Confidence: ${Math.round(details.confidence * 100)}%`);
+  }
+
+  if (Array.isArray(details.modelPlan)) {
+    lines.push(`${details.modelPlan.length} AI task routes prepared`);
+  }
+
+  return lines;
+}
+
 export function StreamTimeline({ events }: { events: AnalysisStreamEvent[] }) {
   const latestIndex = events.length - 1;
+  const latestEvent = events[latestIndex];
 
   if (!events.length) {
     return (
@@ -49,6 +82,23 @@ export function StreamTimeline({ events }: { events: AnalysisStreamEvent[] }) {
           style={{ width: `${events[latestIndex]?.progress ?? 0}%` }}
         />
       </div>
+      {latestEvent ? (
+        <div className="mb-3 rounded-md border border-border bg-background p-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge>{latestEvent.progress}%</Badge>
+            <Badge>{latestEvent.type}</Badge>
+            <span className="text-sm font-bold">{latestEvent.stage}</span>
+          </div>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{latestEvent.message}</p>
+          {detailLines(latestEvent.details).length ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {detailLines(latestEvent.details).map((line) => (
+                <Badge key={line}>{line}</Badge>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div className="max-h-[520px] space-y-2 overflow-auto pr-1">
         {events.map((event, index) => {
           const isLatest = index === latestIndex;
@@ -67,6 +117,13 @@ export function StreamTimeline({ events }: { events: AnalysisStreamEvent[] }) {
                     <Badge>{event.progress}%</Badge>
                   </div>
                   <p className="mt-1 break-words text-xs text-muted-foreground">{event.stage}</p>
+                  {detailLines(event.details).length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {detailLines(event.details).map((line) => (
+                        <Badge key={line}>{line}</Badge>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </div>

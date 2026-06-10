@@ -2,7 +2,7 @@
 
 import { Route } from "lucide-react";
 import { useState } from "react";
-import { RuntimeFlowStepper } from "@/components/runtime-flow/RuntimeFlowStepper";
+import { RuntimeFlowVisual } from "@/components/runtime-flow/RuntimeFlowVisual";
 import { Badge } from "@/components/ui/badge";
 import type { RuntimeFlow } from "@/lib/types/analysis";
 import { cn } from "@/lib/utils";
@@ -57,8 +57,7 @@ export function RuntimeFlowPanel({ runtimeFlows }: { runtimeFlows: RuntimeFlow[]
         ))}
       </div>
 
-      <RuntimeFlowStepper flow={activeFlow} />
+      <RuntimeFlowVisual flow={activeFlow} />
     </section>
   );
 }
-

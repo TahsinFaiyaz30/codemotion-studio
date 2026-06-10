@@ -1,27 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Database, MousePointerClick, Server, Sparkles, UserRound } from "lucide-react";
+import { StoryThreeStage } from "@/components/story/StoryThreeStage";
 import { Badge } from "@/components/ui/badge";
-import type { CodebaseStoryScene, StoryAnimationComponentSpec } from "@/lib/types/analysis";
-
-function iconForScene(animationType: CodebaseStoryScene["animationType"]) {
-  if (animationType === "database-pulse") return Database;
-  if (animationType === "api-tunnel") return Server;
-  if (animationType === "ui-click") return MousePointerClick;
-  if (animationType === "hero-intro") return UserRound;
-  return Sparkles;
-}
+import type { CodebaseStoryScene } from "@/lib/types/analysis";
 
 export function StorySceneRenderer({
   scene,
-  componentSpecs
+  worldMotifs = []
 }: {
   scene: CodebaseStoryScene;
-  componentSpecs: StoryAnimationComponentSpec[];
+  worldMotifs?: string[];
 }) {
-  const Icon = iconForScene(scene.animationType);
-
   return (
     <motion.article
       key={scene.id}
@@ -54,38 +44,9 @@ export function StorySceneRenderer({
         </div>
       </div>
 
-      <div className="relative min-h-80 overflow-hidden rounded-lg border border-border bg-card p-4">
-        <div className="absolute inset-x-4 top-4 flex h-9 items-center gap-2 rounded-md border border-border bg-background px-3">
-          <span className="h-2.5 w-2.5 rounded-full bg-warning" />
-          <span className="h-2.5 w-2.5 rounded-full bg-accent" />
-          <span className="h-2.5 w-2.5 rounded-full bg-primary" />
-          <span className="ml-2 truncate text-xs text-muted-foreground">{scene.title}</span>
-        </div>
-        <div className="mt-16 grid place-items-center rounded-lg border border-border bg-background p-8 text-center">
-          <motion.div
-            className="mb-5 flex h-16 w-16 items-center justify-center rounded-lg bg-primary text-primary-foreground"
-            animate={{
-              scale: scene.animationType === "database-pulse" ? [1, 1.08, 1] : 1,
-              x: scene.animationType === "data-travel" || scene.animationType === "api-tunnel" ? [-20, 20, -20] : 0
-            }}
-            transition={{ duration: 2.4, repeat: Infinity }}
-          >
-            <Icon className="h-7 w-7" aria-hidden="true" />
-          </motion.div>
-          <p className="max-w-sm text-sm leading-6 text-muted-foreground">{scene.whatAppDoesBehindScenes}</p>
-        </div>
-        {componentSpecs.length ? (
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            {componentSpecs.slice(0, 2).map((spec) => (
-              <div key={spec.name} className="rounded-md border border-border bg-background p-3">
-                <p className="text-xs font-bold">{spec.componentType}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{spec.animation.motion}</p>
-              </div>
-            ))}
-          </div>
-        ) : null}
+      <div>
+        <StoryThreeStage scene={scene} worldMotifs={worldMotifs} />
       </div>
     </motion.article>
   );
 }
-

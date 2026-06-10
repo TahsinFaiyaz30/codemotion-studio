@@ -1,3 +1,4 @@
+import { normalizeAiProviderChoice } from "@/lib/ai/provider";
 import { runAnalyzer } from "@/lib/scanner/analyzer";
 import { saveAnalysisResult } from "@/lib/storage/analysis-store";
 import { toBrowserSafeAnalysis } from "@/lib/storage/browser-analysis-store";
@@ -28,7 +29,8 @@ export async function POST(request: Request) {
         const iterator = runAnalyzer({
           repoUrl: typeof payload.repoUrl === "string" ? payload.repoUrl : undefined,
           mode: isAnalysisMode(payload.mode) ? payload.mode : "balanced",
-          manualFiles: typeof payload.manualFiles === "string" ? payload.manualFiles : undefined
+          manualFiles: typeof payload.manualFiles === "string" ? payload.manualFiles : undefined,
+          aiProvider: normalizeAiProviderChoice(payload.aiProvider)
         });
         let next = await iterator.next();
 

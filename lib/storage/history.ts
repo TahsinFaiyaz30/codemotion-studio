@@ -2,6 +2,7 @@ export interface StoredAnalysisRecord {
   id: string;
   repoUrl: string;
   mode: string;
+  aiProvider?: string;
   savedAt: string;
 }
 

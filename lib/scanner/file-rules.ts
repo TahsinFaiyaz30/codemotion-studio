@@ -112,7 +112,8 @@ export function scoreFile(filePath: string, size: number) {
   let score = 10;
 
   if (["ts", "tsx", "js", "jsx"].includes(extension)) score += 35;
-  if (["json", "css", "scss", "prisma", "mdx"].includes(extension)) score += 18;
+  if (["json", "css", "scss", "prisma", "md", "mdx"].includes(extension)) score += 18;
+  if (/^(readme|package|app|manifest|project|product)\.(md|mdx|json)$/i.test(basename)) score += 70;
   if (/^(package|next\.config|vite\.config|tailwind\.config|tsconfig|postcss\.config)/.test(basename)) score += 48;
   if (normalized.includes("/app/") || normalized.startsWith("app/")) score += 38;
   if (normalized.includes("/pages/") || normalized.startsWith("pages/")) score += 34;
@@ -178,4 +179,3 @@ export function labelFromPath(filePath: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
-

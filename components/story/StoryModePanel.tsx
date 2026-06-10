@@ -1,9 +1,8 @@
 "use client";
 
-import { BookOpen } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { BookOpen, Clapperboard } from "lucide-react";
+import { useEffect, useState } from "react";
 import { StoryControls } from "@/components/story/StoryControls";
-import { StoryGeneratedComponentRenderer } from "@/components/story/StoryGeneratedComponentRenderer";
 import { StorySceneRenderer } from "@/components/story/StorySceneRenderer";
 import { Badge } from "@/components/ui/badge";
 import type { CodebaseStory, StoryAnimationComponentSpec } from "@/lib/types/analysis";
@@ -19,10 +18,6 @@ export function StoryModePanel({
   const [activeSceneIndex, setActiveSceneIndex] = useState(0);
   const [playing, setPlaying] = useState(false);
   const activeScene = story.scenes[activeSceneIndex] ?? story.scenes[0];
-  const activeSpecs = useMemo(
-    () => storyComponents.filter((spec) => spec.sceneId === activeScene?.id),
-    [activeScene?.id, storyComponents]
-  );
 
   useEffect(() => {
     if (!playing || story.scenes.length < 2) return;
@@ -57,31 +52,33 @@ export function StoryModePanel({
   }
 
   return (
-    <section className="panel rounded-lg p-4">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <BookOpen className="h-5 w-5" aria-hidden="true" />
-          </div>
-          <div>
-            <div className="mb-2 flex flex-wrap gap-2">
-              <Badge>Story Mode</Badge>
-              <Badge>{story.scenes.length} scenes</Badge>
+    <section className="panel overflow-hidden rounded-lg">
+      <div className="border-b border-border bg-card p-4">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
+              <BookOpen className="h-5 w-5" aria-hidden="true" />
             </div>
-            <h2 className="text-2xl font-black">{story.title}</h2>
-            <p className="mt-1 text-sm leading-6 text-muted-foreground">{story.subtitle}</p>
+            <div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                <Badge>Story Mode</Badge>
+                <Badge>{story.scenes.length} scenes</Badge>
+              </div>
+              <h2 className="text-2xl font-black">{story.title}</h2>
+              <p className="mt-1 text-sm leading-6 text-muted-foreground">{story.subtitle}</p>
+            </div>
           </div>
+          <StoryControls
+            playing={playing}
+            onToggle={() => setPlaying((value) => !value)}
+            onNext={nextScene}
+            onPrevious={previousScene}
+            onRestart={restart}
+          />
         </div>
-        <StoryControls
-          playing={playing}
-          onToggle={() => setPlaying((value) => !value)}
-          onNext={nextScene}
-          onPrevious={previousScene}
-          onRestart={restart}
-        />
       </div>
 
-      <div className="mb-4 grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 p-4 md:grid-cols-3">
         <div className="rounded-md border border-border bg-background p-3">
           <p className="text-xs font-bold uppercase text-muted-foreground">What this app is</p>
           <p className="mt-2 text-sm leading-6">{story.normalPersonSummary}</p>
@@ -96,7 +93,7 @@ export function StoryModePanel({
         </div>
       </div>
 
-      <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
+      <div className="flex gap-2 overflow-x-auto border-y border-border bg-background/70 p-4">
         {story.scenes.map((scene, index) => (
           <button
             key={scene.id}
@@ -113,9 +110,19 @@ export function StoryModePanel({
         ))}
       </div>
 
-      <StorySceneRenderer scene={activeScene} componentSpecs={activeSpecs} />
+      <div className="p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Badge>
+            <Clapperboard className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            Scene Theater
+          </Badge>
+          {story.world?.hero ? <Badge>Hero: {story.world.hero}</Badge> : null}
+          {story.world?.setting ? <Badge>{story.world.setting}</Badge> : null}
+        </div>
+        <StorySceneRenderer scene={activeScene} worldMotifs={story.world?.visualMotifs ?? []} />
+      </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="border-t border-border p-4">
         <div className="rounded-md border border-border bg-background p-4">
           <p className="text-xs font-bold uppercase text-muted-foreground">Story arc</p>
           <div className="mt-3 grid gap-2 text-sm leading-6 md:grid-cols-2">
@@ -125,13 +132,7 @@ export function StoryModePanel({
             <p><strong>Resolution:</strong> {story.storyArc.resolution}</p>
           </div>
         </div>
-        <div className="grid gap-2">
-          {activeSpecs.map((spec) => (
-            <StoryGeneratedComponentRenderer key={spec.name} spec={spec} />
-          ))}
-        </div>
       </div>
     </section>
   );
 }
-

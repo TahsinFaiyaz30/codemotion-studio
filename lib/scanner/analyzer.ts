@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { generateAiText, getAiStatus } from "@/lib/ai/provider";
+import {
+  generateAiText,
+  getAiModelPlan,
+  getAiStatus,
+  normalizeAiProviderChoice
+} from "@/lib/ai/provider";
 import { fetchRepoMetadata, fetchRepoTree } from "@/lib/github/api";
 import { parseGitHubRepoUrl } from "@/lib/github/parse";
 import { buildFeatureClusters } from "@/lib/scanner/cluster-builder";
@@ -8,20 +13,36 @@ import { buildConnections } from "@/lib/scanner/connection-weaver";
 import { scanDesignDNA } from "@/lib/scanner/design-dna-scanner";
 import { fetchSelectedFileContents } from "@/lib/scanner/file-fetcher";
 import { findFlows } from "@/lib/scanner/flow-finder";
+import { runFolderAgentBatch } from "@/lib/scanner/folder-agents";
 import { planHugeRepo } from "@/lib/scanner/huge-repo-planner";
 import { parseManualFiles } from "@/lib/scanner/manual-files";
+import { synthesizeProductRuntimeFlows } from "@/lib/scanner/product-flow-synthesizer";
 import { forgePrompts } from "@/lib/scanner/prompt-forge";
 import { synthesizeRuntimeFlows } from "@/lib/scanner/runtimeFlowSynthesizer";
 import { mapAstFiles } from "@/lib/scanner/ast-mapper";
 import { detectStack } from "@/lib/scanner/stack-detective";
+import { synthesizeAppUnderstanding } from "@/lib/story/appUnderstanding";
+import { buildProductSummary } from "@/lib/story/productSummary";
 import { generateCodebaseStory } from "@/lib/story/storyEngine";
 import { planStoryComponents } from "@/lib/story/storyComponentPlanner";
-import type { AnalysisMode, AnalysisResult, AnalysisStage, AnalysisStreamEvent, RepoFile } from "@/lib/types/analysis";
+import {
+  enrichRuntimeFlowsWithVisualSpecs,
+  enrichStoryWithVisualSpecs
+} from "@/lib/story/visualSpecPlanner";
+import type {
+  AiProviderChoice,
+  AnalysisMode,
+  AnalysisResult,
+  AnalysisStage,
+  AnalysisStreamEvent,
+  RepoFile
+} from "@/lib/types/analysis";
 
 export interface AnalyzerInput {
   repoUrl?: string;
   mode: AnalysisMode;
   manualFiles?: string;
+  aiProvider?: AiProviderChoice;
 }
 
 function event(
@@ -53,9 +74,11 @@ function keepResultFiles(files: RepoFile[]) {
 
 export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<AnalysisStreamEvent, AnalysisResult> {
   const mode = input.mode;
+  const aiProviderChoice = normalizeAiProviderChoice(input.aiProvider ?? process.env.AI_PROVIDER ?? "auto");
   const manualInput = input.manualFiles?.trim();
   let repoName = "Manual files";
   let repoUrl = "manual://pasted-files";
+  let repoDescription: string | null = null;
   let branch = "manual";
   let files: RepoFile[] = [];
   const warnings: string[] = [];
@@ -65,7 +88,7 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     "validating_github_url",
     manualInput ? "Validating pasted file bundle." : "Validating GitHub repository URL.",
     4,
-    { mode }
+    { mode, aiProvider: aiProviderChoice }
   );
 
   if (manualInput) {
@@ -91,6 +114,7 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     const metadata = await fetchRepoMetadata(parsed.owner, parsed.repo);
     repoName = metadata.fullName;
     repoUrl = metadata.htmlUrl;
+    repoDescription = metadata.description;
     branch = parsed.branch ?? metadata.defaultBranch;
 
     yield event("stage", "fetching_repo_tree", "Fetching recursive repository tree from GitHub.", 16, {
@@ -182,6 +206,54 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     clusters: clusters.length
   });
 
+  const aiModelPlan = getAiModelPlan(aiProviderChoice);
+
+  yield event(
+    "ai_activity",
+    "running_folder_agents",
+    aiProviderChoice === "auto"
+      ? "Auto AI routing is ready: folder agents, story synthesis, and merge tasks can use different configured models."
+      : `AI routing is locked to ${aiProviderChoice} for every agent task.`,
+    88,
+    {
+      aiProvider: aiProviderChoice,
+      modelPlan: aiModelPlan
+    }
+  );
+
+  const folderIterator = runFolderAgentBatch({
+    files,
+    parsedFiles,
+    nodes,
+    clusters,
+    providerChoice: aiProviderChoice
+  });
+  let folderNext = await folderIterator.next();
+
+  while (!folderNext.done) {
+    const update = folderNext.value;
+    const action = update.kind === "started" ? "started" : "finished";
+
+    yield event(
+      update.kind === "started" ? "ai_activity" : "partial",
+      "running_folder_agents",
+      `Folder agent ${action} for ${update.folder} (${update.index}/${update.total}).`,
+      88 + Math.round((update.index / Math.max(1, update.total)) * 3),
+      {
+        folder: update.folder,
+        agentIndex: update.index,
+        agentTotal: update.total,
+        provider: update.provider,
+        model: update.model,
+        confidence: update.report?.confidence
+      }
+    );
+
+    folderNext = await folderIterator.next();
+  }
+
+  const folderReports = folderNext.value;
+
   yield event(
     "stage",
     "synthesizing_runtime_flows",
@@ -190,7 +262,7 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     { flows: flows.length, clusters: clusters.length }
   );
 
-  const runtimeFlows = synthesizeRuntimeFlows({
+  let runtimeFlows = synthesizeRuntimeFlows({
     nodes,
     edges,
     parsedFiles,
@@ -199,11 +271,73 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     flows
   });
 
+  yield event(
+    "stage",
+    "synthesizing_app_understanding",
+    "Combining folder-agent reports into one product-level understanding of the app.",
+    90,
+    {
+      folderReports: folderReports.length,
+      runtimeFlows: runtimeFlows.length
+    }
+  );
+
+  const appUnderstanding = await synthesizeAppUnderstanding({
+    repoName,
+    repoDescription,
+    summary: `${repoName} has ${clusters.length} feature clusters and ${runtimeFlows.length} runtime flows.`,
+    files,
+    parsedFiles,
+    runtimeFlows,
+    clusters,
+    folderReports,
+    designDNA,
+    providerChoice: aiProviderChoice
+  });
+  const productSummary = buildProductSummary(appUnderstanding);
+
+  yield event(
+    "component_generation",
+    "generating_dynamic_components",
+    "Generating product-level Actual App Flow from app understanding.",
+    91,
+    {
+      runtimeFlows: runtimeFlows.length,
+      renderer: "safe-json-flow"
+    }
+  );
+
+  runtimeFlows = synthesizeProductRuntimeFlows({
+    appUnderstanding,
+    runtimeFlows,
+    folderReports,
+    files,
+    parsedFiles
+  });
+
+  runtimeFlows = await enrichRuntimeFlowsWithVisualSpecs({
+    runtimeFlows,
+    appUnderstanding,
+    providerChoice: aiProviderChoice
+  });
+
+  yield event(
+    "partial",
+    "synthesizing_app_understanding",
+    `Understood app as ${appUnderstanding.appType}: ${appUnderstanding.solution}`,
+    91,
+    {
+      appType: appUnderstanding.appType,
+      audience: appUnderstanding.audience,
+      confidence: appUnderstanding.confidence
+    }
+  );
+
   yield event("stage", "compressing_context", "Compressed analysis context for prompts and safe UI generation.", 91, {
     contextSaved: estimateContextSaved(totalBytes, selectedBytes)
   });
 
-  const aiStatus = getAiStatus();
+  const aiStatus = getAiStatus({ providerChoice: aiProviderChoice, task: "cluster-summary" });
   let aiSummaryText: string | null = null;
   let aiAnalyzedClusters = 0;
 
@@ -216,9 +350,18 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
 
     try {
       aiSummaryText = await generateAiText({
+        providerChoice: aiProviderChoice,
+        task: "cluster-summary",
         system: "You summarize codebase analysis facts. Never claim access to files not provided.",
         prompt: JSON.stringify({
           repoName,
+          appUnderstanding,
+          folderReports: folderReports.map((report) => ({
+            folder: report.folder,
+            appPurpose: report.appPurpose,
+            userFacingRole: report.userFacingRole,
+            realWorldSignals: report.realWorldSignals
+          })),
           stack: stack.map((item) => item.name),
           clusters: clusters.map((cluster) => ({
             name: cluster.name,
@@ -251,19 +394,42 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     aiStatus.configured ? "ai_activity" : "stage",
     "generating_story_mode",
     aiStatus.configured
-      ? "AI is turning the app into a normal-person story based on detected runtime flows."
-      : "Generating Story Mode locally from detected runtime flows.",
+      ? "AI is turning product understanding into a human problem-solution story."
+      : "Generating Story Mode locally from folder agents and runtime flows.",
     94,
-    { runtimeFlows: runtimeFlows.length }
+    {
+      runtimeFlows: runtimeFlows.length,
+      appType: appUnderstanding.appType,
+      problem: appUnderstanding.realWorldProblem
+    }
   );
 
-  const story = await generateCodebaseStory({
+  let story = await generateCodebaseStory({
     repoName,
-    summary:
-      aiSummaryText ??
-      `${repoName} analyzed ${files.length} files and produced ${nodes.length} graph nodes.`,
+    summary: productSummary,
     runtimeFlows,
-    designDNA
+    designDNA,
+    appUnderstanding,
+    folderReports,
+    providerChoice: aiProviderChoice
+  });
+
+  yield event(
+    "component_generation",
+    "generating_dynamic_components",
+    "Generating dynamic JSON visual specs for Three.js Story Mode scenes.",
+    95,
+    {
+      scenes: story.scenes.length,
+      renderer: "safe-json-threejs"
+    }
+  );
+
+  story = await enrichStoryWithVisualSpecs({
+    story,
+    runtimeFlows,
+    appUnderstanding,
+    providerChoice: aiProviderChoice
   });
 
   yield event(
@@ -316,9 +482,7 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     branch,
     mode,
     createdAt: new Date().toISOString(),
-    summary:
-      aiSummaryText ??
-      `${repoName} analyzed ${files.length} repository files, selected ${fetchedSelected.length} source files, parsed ${parsedFiles.length} AST-ready files, and produced ${nodes.length} graph nodes across ${clusters.length} clusters.`,
+    summary: productSummary,
     stats: {
       totalFiles: files.length,
       filesScanned: files.length,
@@ -341,7 +505,11 @@ export async function* runAnalyzer(input: AnalyzerInput): AsyncGenerator<Analysi
     story,
     storyComponents,
     prompts,
-    componentSpec
+    componentSpec,
+    aiProviderChoice,
+    aiModelPlan,
+    folderReports,
+    appUnderstanding
   };
 
   yield event("stage", "composing_visualization", "Composed graph, flows, prompts, and ComponentSpec result.", 99, {

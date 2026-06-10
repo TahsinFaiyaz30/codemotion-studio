@@ -1,5 +1,18 @@
 export type AnalysisMode = "fast" | "balanced" | "deep" | "huge";
 
+export type AiProviderName = "openai" | "groq" | "gemini" | "local";
+
+export type AiProviderChoice = "auto" | AiProviderName;
+
+export type AiTaskType =
+  | "folder-agent"
+  | "cluster-summary"
+  | "story"
+  | "story-merge"
+  | "component"
+  | "prompt"
+  | "general";
+
 export type StreamEventType =
   | "stage"
   | "log"
@@ -26,6 +39,8 @@ export type AnalysisStage =
   | "synthesizing_runtime_flows"
   | "extracting_design_dna"
   | "grouping_feature_clusters"
+  | "running_folder_agents"
+  | "synthesizing_app_understanding"
   | "compressing_context"
   | "running_ai_cluster_summaries"
   | "generating_story_mode"
@@ -180,6 +195,35 @@ export type RuntimeFlowVisualHint =
   | "render"
   | "notification";
 
+export type VisualActorKind = "person" | "app" | "screen" | "api" | "database" | "service" | "result";
+
+export interface VisualActorSpec {
+  id: string;
+  label: string;
+  kind: VisualActorKind;
+  role: string;
+  color: string;
+  iconHint: string;
+}
+
+export interface VisualMotionSpec {
+  actorId: string;
+  from: string;
+  to: string;
+  label: string;
+  motion: StoryMotionType;
+  durationSeconds: number;
+}
+
+export interface FlowVisualSpec {
+  id: string;
+  runtimeFlowId: string;
+  title: string;
+  nodes: VisualActorSpec[];
+  motions: VisualMotionSpec[];
+  evidence: string[];
+}
+
 export interface RuntimeFlowStep {
   order: number;
   layer: RuntimeFlowStepLayer;
@@ -206,6 +250,7 @@ export interface RuntimeFlow {
   businessMeaning: string;
   beginnerExplanation: string;
   confidence: number;
+  visualSpec?: FlowVisualSpec;
 }
 
 export type StoryAnimationType =
@@ -233,6 +278,7 @@ export interface CodebaseStoryScene {
   animationType: StoryAnimationType;
   componentsNeeded: string[];
   durationHintSeconds: number;
+  visualSpec?: VisualSceneSpec;
 }
 
 export interface CodebaseStory {
@@ -253,6 +299,14 @@ export interface CodebaseStory {
   ending: string;
   developerTakeaway: string;
   nonTechnicalTakeaway: string;
+  world?: {
+    setting: string;
+    hero: string;
+    tension: string;
+    productRole: string;
+    emotionalPayoff: string;
+    visualMotifs: string[];
+  };
 }
 
 export type StoryComponentType =
@@ -279,6 +333,18 @@ export type StoryMotionType =
   | "morph"
   | "reveal"
   | "typewriter";
+
+export interface VisualSceneSpec {
+  id: string;
+  title: string;
+  purpose: string;
+  camera: "wide" | "focused" | "journey" | "payoff";
+  setting: string;
+  actors: VisualActorSpec[];
+  motions: VisualMotionSpec[];
+  narrationBeats: string[];
+  evidence: string[];
+}
 
 export interface StoryAnimationComponentSpec {
   name: string;
@@ -374,6 +440,40 @@ export interface AnalysisStats {
   estimatedContextSaved: number;
 }
 
+export interface AiModelPlanItem {
+  task: AiTaskType;
+  provider: AiProviderName;
+  model?: string;
+  reason: string;
+}
+
+export interface FolderAgentReport {
+  id: string;
+  folder: string;
+  files: string[];
+  provider: AiProviderName;
+  model?: string;
+  appPurpose: string;
+  userFacingRole: string;
+  technicalRole: string;
+  realWorldSignals: string[];
+  dataSignals: string[];
+  riskNotes: string[];
+  confidence: number;
+}
+
+export interface AppUnderstanding {
+  appName: string;
+  appType: string;
+  audience: string[];
+  realWorldProblem: string;
+  solution: string;
+  primaryOutcome: string;
+  mainUserJourney: string;
+  supportingEvidence: string[];
+  confidence: number;
+}
+
 export interface AnalysisResult {
   id: string;
   repoName: string;
@@ -401,4 +501,8 @@ export interface AnalysisResult {
   storyComponents: StoryAnimationComponentSpec[];
   prompts: PromptCard[];
   componentSpec: ComponentSpec;
+  aiProviderChoice?: AiProviderChoice;
+  aiModelPlan?: AiModelPlanItem[];
+  folderReports?: FolderAgentReport[];
+  appUnderstanding?: AppUnderstanding;
 }

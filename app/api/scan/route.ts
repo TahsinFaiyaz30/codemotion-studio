@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { normalizeAiProviderChoice } from "@/lib/ai/provider";
 import { runAnalyzer } from "@/lib/scanner/analyzer";
 import type { AnalysisMode } from "@/lib/types/analysis";
 
@@ -13,11 +14,13 @@ export async function POST(request: Request) {
     repoUrl?: string;
     manualFiles?: string;
     mode?: unknown;
+    aiProvider?: unknown;
   };
   const iterator = runAnalyzer({
     repoUrl: payload.repoUrl,
     manualFiles: payload.manualFiles,
-    mode: isAnalysisMode(payload.mode) ? payload.mode : "balanced"
+    mode: isAnalysisMode(payload.mode) ? payload.mode : "balanced",
+    aiProvider: normalizeAiProviderChoice(payload.aiProvider)
   });
   let next = await iterator.next();
 

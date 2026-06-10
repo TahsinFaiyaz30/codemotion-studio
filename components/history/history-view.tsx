@@ -41,7 +41,8 @@ export function HistoryView() {
                 <div className="min-w-0">
                   <h2 className="truncate font-bold">Last streamed analysis</h2>
                   <p className="mt-1 truncate text-sm text-muted-foreground">
-                    {record.repoUrl} · {record.mode} · {new Date(record.savedAt).toLocaleString()}
+                    {record.repoUrl} · {record.mode} · {record.aiProvider ?? "auto"} ·{" "}
+                    {new Date(record.savedAt).toLocaleString()}
                   </p>
                 </div>
                 <Link href={`/result/${record.id}`} className={buttonClassName({ variant: "outline", size: "sm" })}>
